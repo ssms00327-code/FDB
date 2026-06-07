@@ -1,0 +1,4 @@
+{
+  "main": "dist-electron/main.js",
+  "preload": "dist-electron/preload.js"
+}
