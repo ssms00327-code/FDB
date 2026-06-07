@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Cloud, CloudRain, Sun, Wind, Droplets, Eye, Gauge, Search } from 'lucide-react';
+import { fetchCurrentWeather, fetchWeatherForecast } from '../services/weatherService';
 
 interface WeatherData {
   city: string;
@@ -25,8 +26,6 @@ interface ForecastData {
   windSpeed: number;
 }
 
-const API_KEY = 'your_openweathermap_api_key'; // Get from https://openweathermap.org/api
-
 export default function WeatherDashboard() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [forecast, setForecast] = useState<ForecastData[]>([]);
@@ -42,61 +41,11 @@ export default function WeatherDashboard() {
     setLoading(true);
     setError('');
     try {
-      // Current weather
-      const response = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric`
-      );
-      
-      if (!response.ok) {
-        throw new Error('City not found');
-      }
-
-      const data = await response.json();
-      
-      const weatherData: WeatherData = {
-        city: data.name,
-        country: data.sys.country,
-        temperature: Math.round(data.main.temp),
-        feelsLike: Math.round(data.main.feels_like),
-        description: data.weather[0].main,
-        humidity: data.main.humidity,
-        windSpeed: Math.round(data.wind.speed),
-        visibility: Math.round(data.visibility / 1000),
-        pressure: data.main.pressure,
-        icon: data.weather[0].icon,
-        sunrise: new Date(data.sys.sunrise * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        sunset: new Date(data.sys.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-
+      const weatherData = await fetchCurrentWeather(city);
       setWeather(weatherData);
 
-      // Fetch forecast
-      const forecastResponse = await fetch(
-        `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${API_KEY}&units=metric`
-      );
-      
-      const forecastData = await forecastResponse.json();
-      
-      // Process forecast data for next 5 days (one entry per day at noon)
-      const dailyForecasts: ForecastData[] = [];
-      const seenDates = new Set();
-      
-      forecastData.list.forEach((item: any) => {
-        const date = new Date(item.dt * 1000).toLocaleDateString();
-        if (!seenDates.has(date) && dailyForecasts.length < 5) {
-          seenDates.add(date);
-          dailyForecasts.push({
-            date,
-            temp: Math.round(item.main.temp),
-            description: item.weather[0].main,
-            icon: item.weather[0].icon,
-            humidity: item.main.humidity,
-            windSpeed: Math.round(item.wind.speed),
-          });
-        }
-      });
-
-      setForecast(dailyForecasts);
+      const forecastData = await fetchWeatherForecast(city);
+      setForecast(forecastData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch weather data');
       setWeather(null);
